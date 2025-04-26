@@ -1,0 +1,1 @@
+This would be a background music file in a real implementation.
