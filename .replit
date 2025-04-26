@@ -1,0 +1,41 @@
+modules = ["python-3.11"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf", "fontconfig", "freetype", "libjpeg", "libpng", "pkg-config", "portmidi"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "SpaceDefender"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "run_space_defender"
+
+[[workflows.workflow]]
+name = "SpaceDefender"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pip install pgzero pygame && python space_defender.py"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "run_space_defender"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python space_defender.py"
+
+[deployment]
+run = ["sh", "-c", "pip install pgzero pygame && python space_defender.py"]
