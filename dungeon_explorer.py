@@ -3,7 +3,23 @@
 import pgzrun
 import math
 import random
+import os
 from pygame import Rect, K_RETURN, K_ESCAPE, K_UP, K_DOWN, K_LEFT, K_RIGHT, K_SPACE
+
+# Function to safely handle missing sound and music files during development
+def safe_play_sound(sound_name):
+    if hasattr(sounds, sound_name):
+        try:
+            sounds.__getattr__(sound_name).play()
+        except:
+            pass
+
+def safe_play_music(music_name):
+    if hasattr(music, music_name):
+        try:
+            music.play(music_name)
+        except:
+            pass
 
 # Constants
 TITLE = "Dungeon Explorer"
@@ -334,19 +350,28 @@ def generate_level(level_num):
 
 # Update game state
 def update():
-    global animation_timer, game_state, high_score, score, level, audio_button
+    global animation_timer, game_state, high_score, score, level, audio_button, audio_enabled
     
     animation_timer += 1
     
     # Handle mouse for menu
     if game_state == "menu":
-        pos = (mouse.x, mouse.y)
-        start_button.check_hover(pos)
-        audio_button.check_hover(pos)
-        exit_button.check_hover(pos)
+        # In PgZero, mouse is accessible through the 'mousepos' tuple instead
+        try:
+            # Try using the mouse position directly
+            if 'mouse' in globals() and hasattr(mouse, 'x') and hasattr(mouse, 'y'):
+                pos = (mouse.x, mouse.y)
+            else:
+                # If not available, default to center
+                pos = (WIDTH // 2, HEIGHT // 2)
+            
+            start_button.check_hover(pos)
+            audio_button.check_hover(pos)
+            exit_button.check_hover(pos)
+        except Exception as e:
+            print(f"Error handling mouse: {e}")
         
         # Update audio button text
-        global audio_enabled
         audio_button.text = "Sound: ON" if audio_enabled else "Sound: OFF"
     
     # Update game objects if playing
