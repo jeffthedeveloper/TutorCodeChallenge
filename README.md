@@ -1,18 +1,19 @@
-
-```markdown
 # Dungeon Explorer - Python Tutor Assessment
 
 Este jogo foi criado como uma ferramenta de avaliação para tutores de Python. Ele demonstra o uso dos módulos PgZero, math e random para criar um jogo Rogue-like totalmente funcional.
 
 ## Objetivo do Jogo
+
 Controle seu herói por uma masmorra, coletando tesouros enquanto evita inimigos. Avance pelos níveis coletando todos os tesouros em cada um deles.
 
 ## Controles
+
 - Teclas de Seta: Movem o personagem do jogador
 - Mouse: Navega no menu
 - Enter: Inicia o jogo ou reinicia após o Game Over
 
 ## Funcionalidades
+
 - Menu principal com botões "Start Game", "Sound On/Off" e "Exit"
 - Música de fundo e efeitos sonoros com opção de ligar/desligar
 - Múltiplos inimigos perigosos que se movem dentro de suas áreas definidas
@@ -22,7 +23,9 @@ Controle seu herói por uma masmorra, coletando tesouros enquanto evita inimigos
 - Múltiplos níveis com dificuldade crescente
 
 ## Critérios de Avaliação
+
 Este código demonstra:
+
 1. Fundamentos de Python (variáveis, funções, loops, condicionais)
 2. Conceitos de programação orientada a objetos (classes, herança)
 3. Princípios de desenvolvimento de jogos (detecção de colisão, gerenciamento de sprites, animação)
@@ -30,6 +33,7 @@ Este código demonstra:
 5. Implementação usando módulos restritos (PgZero, math, random, Rect do Pygame)
 
 ## Requisitos
+
 - Python 3.6 ou superior (recomendado Python 3.9 para evitar potenciais conflitos com versões mais recentes)
 - PgZero (Pygame Zero)
 
@@ -40,13 +44,17 @@ Para garantir que o jogo funcione corretamente, siga estas instruções para ins
 **1. Verificando sua versão do Python:**
 
 Abra o terminal (ou Prompt de Comando no Windows) e digite:
+
 ```bash
 python --version
 ```
+
 ou
+
 ```bash
 py --version
 ```
+
 Isso mostrará a versão padrão do Python que está sendo usada.
 
 **2. Instalando o PgZero:**
