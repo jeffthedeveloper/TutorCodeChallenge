@@ -5,48 +5,28 @@ import math
 import random
 import os
 from pygame import Rect, K_RETURN, K_ESCAPE, K_UP, K_DOWN, K_LEFT, K_RIGHT, K_SPACE
-import pygame  # Importar pygame apenas para carregar sons toda a logica foi feita com pgzero
-
-# Configuração inicial do mouse
-pygame.mouse.set_visible(True)
-
-# verificando inicialização do pygame mixer
-if not pygame.mixer.get_init():
-    pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
-    
-print(f"Disponíveis em sounds: {dir(sounds)}")  # Verifique quais sons estão carregados
+import pygame  # Importar pygame para carregar sons
 
 # Inicialização dos sons
 pygame.mixer.init()
-try:
-    sounds.background = pygame.mixer.Sound('music/background.ogg')
-    sounds.hit = pygame.mixer.Sound('sounds/hit.ogg')
-    sounds.pickup = pygame.mixer.Sound('sounds/pickup.ogg')
-    print("Sons carregados com sucesso!")  # Debug
-except Exception as e:
-    print(f"Erro ao carregar sons: {e}")
-    # Cria sons vazios para evitar erros
-    sounds.background = None
-    sounds.hit = None
-    sounds.pickup = None
+sounds.background = pygame.mixer.Sound('sounds/background.ogg') 
+sounds.hit = pygame.mixer.Sound('sounds/hit.ogg')           
+sounds.pickup = pygame.mixer.Sound('sounds/pickup.ogg')     
 
 # Estados do jogo
 jogo_comecou = False
 music_playing = False
 menu_aberto = True  # O menu começa aberto
-audio_feedback_timer = 0  # Timer para feedback visual do áudio
 
 # Function to safely handle missing sound and music files during development
 def safe_play_sound(sound_name):
-    if not audio_enabled:
-        return
-        
-    sound = getattr(sounds, sound_name, None)
-    if sound is not None:
+    if hasattr(sounds, sound_name) and getattr(sounds, sound_name):
         try:
-            sound.play()
+            getattr(sounds, sound_name).play()
         except Exception as e:
             print(f"Erro ao tocar som {sound_name}: {e}")
+
+#modificando a função safe_play_music() para ter mais controle no áudio:
 
 def safe_play_music(force_stop=False):
     global music_playing
@@ -75,6 +55,8 @@ def safe_play_music(force_stop=False):
         except Exception as e:
             print(f"Erro ao parar música de fundo: {e}")
 
+
+
 # Constants
 TITLE = "Dungeon Explorer"
 WIDTH = 800
@@ -100,39 +82,6 @@ animation_timer = 0
 animation_speed = 10  # frames between animation updates
 
 # Class definitions
-class CollisionHandler:
-    @staticmethod
-    def precise_collision(rect, walls):
-        """Verificação de colisão com margem de segurança"""
-        margin = 2  # Margem de pixels para evitar colisões fantasmas
-        test_rect = rect.inflate(-margin, -margin)  # Reduz o retângulo
-        
-        for wall in walls:
-            if test_rect.colliderect(wall.get_rect()):
-                return True
-        return False
-
-    @staticmethod
-    def can_move(character, walls, dx, dy):
-        """Verifica movimento com tratamento de cantos"""
-        test_rect = Rect(character.x + dx, character.y + dy, 
-                        character.width, character.height)
-        
-        # Verifica colisão com margem
-        if not CollisionHandler.precise_collision(test_rect, walls):
-            return True
-            
-        # Tenta movimento parcial (deslize em paredes)
-        if dx != 0 and not CollisionHandler.precise_collision(
-            Rect(character.x + dx, character.y, character.width, character.height), walls):
-            return True
-            
-        if dy != 0 and not CollisionHandler.precise_collision(
-            Rect(character.x, character.y + dy, character.width, character.height), walls):
-            return True
-            
-        return False
-
 class Character:
     def __init__(self, x, y, idle_images, walk_images):
         self.x = x
@@ -173,31 +122,31 @@ class Player(Character):
         self.invulnerable_timer = 0
 
     def update(self):
-        # Guarda posição anterior
         previous_x, previous_y = self.x, self.y
-        
-        # Controle de movimento
-        dx, dy = 0, 0
-        if keyboard.left: dx = -PLAYER_SPEED
-        if keyboard.right: dx = PLAYER_SPEED
-        if keyboard.up: dy = -PLAYER_SPEED
-        if keyboard.down: dy = PLAYER_SPEED
+        self.moving = False
 
-        # Normalização diagonal
-        if dx and dy:
-            dx *= 0.7071
-            dy *= 0.7071
+        if keyboard.left and self.x > 0:
+            self.x -= PLAYER_SPEED
+            self.direction = -1
+            self.moving = True
+        if keyboard.right and self.x < WIDTH - self.width:
+            self.x += PLAYER_SPEED
+            self.direction = 1
+            self.moving = True
+        if keyboard.up and self.y > 0:
+            self.y -= PLAYER_SPEED
+            self.moving = True
+        if keyboard.down and self.y < HEIGHT - self.height:
+            self.y += PLAYER_SPEED
+            self.moving = True
 
-        # Verificação de colisão com paredes
-        if CollisionHandler.can_move(self, walls, dx, dy):
-            self.x += dx
-            self.y += dy
-            self.moving = dx != 0 or dy != 0
-        else:
-            self.x, self.y = previous_x, previous_y
-            self.moving = False
+        # Check for wall collisions
+        for wall in walls:
+            if self.get_rect().colliderect(wall.get_rect()):
+                self.x, self.y = previous_x, previous_y
+                break
 
-        # Verificação de tesouros
+        # Check for treasure collisions
         for treasure in treasures[:]:
             if self.get_rect().colliderect(treasure.get_rect()):
                 treasures.remove(treasure)
@@ -207,24 +156,15 @@ class Player(Character):
                 if audio_enabled:
                     safe_play_sound('pickup')
 
-        # Verificação de inimigos
-        for enemy in enemies:
-            if self.get_rect().colliderect(enemy.get_rect()) and self.invulnerable_timer <= 0:
-                if audio_enabled:
-                    safe_play_sound('hit')
-                global game_state
-                game_state = "game_over"
-                if score > high_score:
-                    high_score = score
-
-        # Atualização de animação
+        # Update animation state
         if self.moving:
             self.current_images = self.walk_images
         else:
             self.current_images = self.idle_images
+
         self.update_animation()
 
-        # Temporizador de invulnerabilidade
+        # Handle invulnerability timer
         if self.invulnerable_timer > 0:
             self.invulnerable_timer -= 1
 
@@ -325,26 +265,18 @@ enemies = []
 walls = []
 treasures = []
 
-# Button class for menu and in-game
+# Button class for menu
 class Button:
-    def __init__(self, x, y, width, height, text, in_game=False):
+    def __init__(self, x, y, width, height, text):
         self.rect = Rect(x, y, width, height)
         self.text = text
         self.hovered = False
-        self.in_game = in_game  # Se é um botão in-game
 
     def draw(self):
-        if self.in_game:
-            # Estilo minimalista para botões in-game
-            color = (0, 0, 0, 150) if self.hovered else (0, 0, 0, 100)
-            screen.draw.filled_rect(self.rect, color)
-            screen.draw.text(self.text, center=self.rect.center, fontsize=16, color=(255, 255, 255))
-        else:
-            # Estilo normal para menu
-            color = (100, 100, 200) if self.hovered else (70, 70, 170)
-            screen.draw.filled_rect(self.rect, color)
-            screen.draw.rect(self.rect, (200, 200, 255))
-            screen.draw.text(self.text, center=self.rect.center, fontsize=20, color=(255, 255, 255))
+        color = (100, 100, 200) if self.hovered else (70, 70, 170)
+        screen.draw.filled_rect(self.rect, color)
+        screen.draw.rect(self.rect, (200, 200, 255))
+        screen.draw.text(self.text, center=self.rect.center, fontsize=20, color=(255, 255, 255))
 
     def check_hover(self, pos):
         self.hovered = self.rect.collidepoint(pos)
@@ -356,9 +288,6 @@ class Button:
 start_button = Button(WIDTH//2 - 100, HEIGHT//2 - 50, 200, 50, "Start Game")
 audio_button = Button(WIDTH//2 - 100, HEIGHT//2 + 20, 200, 50, "Sound: ON")
 exit_button = Button(WIDTH//2 - 100, HEIGHT//2 + 90, 200, 50, "Exit")
-
-# Create in-game audio button
-in_game_audio_button = Button(WIDTH - 120, 10, 110, 30, "Sound: ON", True)
 
 # Level generation
 def generate_level(level_num):
@@ -459,33 +388,27 @@ def generate_level(level_num):
 
 # Update game state
 def update():
-    global animation_timer, game_state, high_score, score, level, audio_button, audio_enabled, music_playing, jogo_comecou, audio_feedback_timer
+    global animation_timer, game_state, high_score, score, level, audio_button, audio_enabled, music_playing, jogo_comecou
 
     safe_play_music()
-    animation_timer += 1
-    
-    # Decrementa o timer de feedback do áudio
-    if audio_feedback_timer > 0:
-        audio_feedback_timer -= 1
 
-    # Handle mouse for menu - versão mais segura
+    animation_timer += 1
+
+    # Handle mouse for menu
     if game_state == "menu":
         try:
-            if hasattr(mouse, 'pos') and mouse.pos is not None:
-                start_button.check_hover(mouse.pos)
-                audio_button.check_hover(mouse.pos)
-                exit_button.check_hover(mouse.pos)
+            pos = mouse.pos
+            start_button.check_hover(pos)
+            audio_button.check_hover(pos)
+            exit_button.check_hover(pos)
         except Exception as e:
-            print(f"Erro no mouse handling: {str(e)}")
+            print(f"Erro handling mouse: {e}")
 
-    # Handle mouse for in-game audio button
+        # Update audio button text
+        audio_button.text = "Sound: ON" if audio_enabled else "Sound: OFF"
+
+    # Update game objects if playing
     elif game_state == "playing":
-        try:
-            if hasattr(mouse, 'pos') and mouse.pos is not None:
-                in_game_audio_button.check_hover(mouse.pos)
-        except Exception as e:
-            print(f"Erro no mouse handling in-game: {str(e)}")
-
         # Update player
         player.update()
 
@@ -514,13 +437,6 @@ def draw():
     screen.clear()
 
     if game_state == "menu":
-        # Atualização do menu (hover dos botões)
-        mouse_pos = pygame.mouse.get_pos() if pygame.mouse.get_focused() else None
-        if mouse_pos:
-            start_button.check_hover(mouse_pos)
-            audio_button.check_hover(mouse_pos)
-            exit_button.check_hover(mouse_pos)
-            
         # Draw menu background
         screen.fill((20, 20, 40))
 
@@ -567,16 +483,6 @@ def draw():
         screen.draw.text(f"Score: {score}", (10, 10), fontsize=20, color=(255, 255, 255))
         screen.draw.text(f"Level: {level}", (10, 40), fontsize=20, color=(255, 255, 255))
 
-        # Draw in-game audio button
-        if game_state == "playing":
-            in_game_audio_button.text = "Sound: ON" if audio_enabled else "Sound: OFF"
-            in_game_audio_button.draw()
-            
-            # Draw feedback visual
-            if audio_feedback_timer > 0:
-                screen.draw.text("✓", (in_game_audio_button.rect.right + 5, in_game_audio_button.rect.y + 5), 
-                                fontsize=20, color=(0, 255, 0))
-
         # Draw game over screen
         if game_state == "game_over":
             screen.draw.filled_rect(Rect(WIDTH//4, HEIGHT//3, WIDTH//2, HEIGHT//3), (0, 0, 0, 180))
@@ -587,34 +493,24 @@ def draw():
             screen.draw.text("Press ENTER to play again", centerx=WIDTH//2, centery=HEIGHT//2 + 40,
                                 fontsize=20, color=(200, 200, 200))
 
-# Mouse handlers
+# Mouse handlers, modificando o botao de handler no evento on_mouse_down
+
+
 def on_mouse_down(pos, button):
-    global game_state, audio_enabled, audio_feedback_timer
-    
+    global game_state, audio_enabled
     if game_state == "menu":
         if start_button.check_click(pos):
             start_game()
         elif audio_button.check_click(pos):
             audio_enabled = not audio_enabled
-            audio_button.text = "Sound: ON" if audio_enabled else "Sound: OFF"
+            # Força a atualização imediata do estado do áudio
             if audio_enabled:
                 safe_play_music()
             else:
                 safe_play_music(force_stop=True)
         elif exit_button.check_click(pos):
             exit()
-    
-    elif game_state == "playing":
-        # Verifica clique no botão de áudio durante o jogo
-        if in_game_audio_button.check_click(pos):
-            audio_enabled = not audio_enabled
-            audio_feedback_timer = 30  # 0.5 segundos de feedback (considerando 60 FPS)
-            # Atualiza imediatamente o estado do áudio
-            if audio_enabled:
-                safe_play_music()
-            else:
-                safe_play_music(force_stop=True)
-
+            
 # Keyboard handlers
 def on_key_down(key):
     global game_state, score, level, jogo_comecou, menu_aberto
@@ -630,6 +526,8 @@ def on_key_down(key):
         generate_level(level)
         menu_aberto = False
         
+    # garantindo que a música comece quando o jogo inicia
+
 def start_game():
     global game_state, score, level, jogo_comecou, music_playing
     game_state = "playing"
