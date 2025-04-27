@@ -1,1 +1,0 @@
-This would be a pickup sound effect in a real implementation.

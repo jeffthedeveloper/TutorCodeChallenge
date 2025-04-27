@@ -6,6 +6,14 @@ import random
 import os
 from pygame import Rect, K_RETURN, K_ESCAPE, K_UP, K_DOWN, K_LEFT, K_RIGHT, K_SPACE
 
+# declaring the variables / was necessary make the conversion for .ogg or .wav files
+# to work with pgzrun / so i put the background original music in the music folder
+
+music = sounds.background
+hit_sound = sounds.hit
+pickup_sound = sounds.pickup
+
+
 # Function to safely handle missing sound and music files during development
 def safe_play_sound(sound_name):
     if hasattr(sounds, sound_name):
@@ -451,6 +459,8 @@ def draw():
         screen.draw.text(f"Score: {score}", (10, 10), fontsize=20, color=(255, 255, 255))
         screen.draw.text(f"Level: {level}", (10, 40), fontsize=20, color=(255, 255, 255))
         
+        
+        
         # Draw game over screen
         if game_state == "game_over":
             screen.draw.filled_rect(Rect(WIDTH//4, HEIGHT//3, WIDTH//2, HEIGHT//3), (0, 0, 0, 180))
@@ -491,6 +501,7 @@ def start_game():
     generate_level(level)
     if audio_enabled and hasattr(music, 'background'):
         music.play('background')
+        music.play(-1)  # Loop the background music
 
 # Initialize the game
 generate_level(level)
