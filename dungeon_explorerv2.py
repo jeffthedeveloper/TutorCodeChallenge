@@ -26,20 +26,36 @@ def safe_play_sound(sound_name):
         except Exception as e:
             print(f"Erro ao tocar som {sound_name}: {e}")
 
-def safe_play_music():
+#modificando a função safe_play_music() para ter mais controle no áudio:
+
+def safe_play_music(force_stop=False):
     global music_playing
-    if sounds.background and not music_playing and not jogo_comecou:
+    if force_stop:
+        if music_playing and sounds.background:
+            sounds.background.stop()
+            music_playing = False
+        return
+    
+    if audio_enabled and sounds.background and not music_playing and not jogo_comecou:
         try:
             sounds.background.play(-1)  # Toca em loop
             music_playing = True
         except Exception as e:
             print(f"Erro ao tocar música de fundo: {e}")
+    elif not audio_enabled and music_playing:
+        try:
+            sounds.background.stop()
+            music_playing = False
+        except Exception as e:
+            print(f"Erro ao parar música de fundo: {e}")
     elif jogo_comecou and music_playing:
         try:
             sounds.background.stop()
             music_playing = False
         except Exception as e:
             print(f"Erro ao parar música de fundo: {e}")
+
+
 
 # Constants
 TITLE = "Dungeon Explorer"
@@ -477,7 +493,9 @@ def draw():
             screen.draw.text("Press ENTER to play again", centerx=WIDTH//2, centery=HEIGHT//2 + 40,
                                 fontsize=20, color=(200, 200, 200))
 
-# Mouse handlers
+# Mouse handlers, modificando o botao de handler no evento on_mouse_down
+
+
 def on_mouse_down(pos, button):
     global game_state, audio_enabled
     if game_state == "menu":
@@ -485,9 +503,14 @@ def on_mouse_down(pos, button):
             start_game()
         elif audio_button.check_click(pos):
             audio_enabled = not audio_enabled
+            # Força a atualização imediata do estado do áudio
+            if audio_enabled:
+                safe_play_music()
+            else:
+                safe_play_music(force_stop=True)
         elif exit_button.check_click(pos):
             exit()
-
+            
 # Keyboard handlers
 def on_key_down(key):
     global game_state, score, level, jogo_comecou, menu_aberto
@@ -502,6 +525,8 @@ def on_key_down(key):
         game_state = "playing"
         generate_level(level)
         menu_aberto = False
+        
+    # garantindo que a música comece quando o jogo inicia
 
 def start_game():
     global game_state, score, level, jogo_comecou, music_playing
@@ -510,13 +535,18 @@ def start_game():
     level = 1
     jogo_comecou = True
     generate_level(level)
-    if audio_enabled and sounds.background and not music_playing:
+    # Para a música do menu se estiver tocando
+    if music_playing:
+        safe_play_music(force_stop=True)
+    
+    # Se o áudio estiver habilitado, toca a música do jogo
+    if audio_enabled and sounds.background:
         try:
             sounds.background.play(-1)
             music_playing = True
         except Exception as e:
             print(f"Erro ao tocar música ao iniciar o jogo: {e}")
-
+            
 # Initialize the game
 generate_level(level)
 safe_play_music() # Tentar tocar a música no início
